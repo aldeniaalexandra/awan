@@ -1,0 +1,30 @@
+name: awan profile
+
+# Regenerates assets/awan.gif from awan.json. Triggers when you edit awan.json,
+# nightly (so your numbers stay fresh), or by hand: Actions → Run workflow.
+#
+# The machinery lives in the awan repo, so our bug fixes reach you by tag
+# rather than by you re-copying anything. @v0 moves forward as we release and
+# keeps awan.json compatible; pin @v0.0.5 instead if you'd rather nothing ever
+# changed under you.
+on:
+  push:
+    branches: [main, master] # profile repos use either
+    paths: ["awan.json"]
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  awan:
+    uses: codewithwan/awan/.github/workflows/profile.yml@v0
+    permissions:
+      contents: write
+    with:
+      brag_over: 100 # your bar for "a good month"
+      brag_say: "i'm so excited!"
+      cope_say: "...i'll fix that, promise"
+      # Also draw the standalone stats banner (all-time commits, current and
+      # longest streak, with dates). Delete this line to skip it — you add
+      # nothing to awan.json either way, the workflow fills the numbers.
+      stats_banner: assets/stats-banner.gif

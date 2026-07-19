@@ -1,0 +1,26 @@
+# Build artifacts
+/target
+**/*.rs.bk
+Cargo.lock.orig
+
+# OS / editor
+.DS_Store
+*.log
+.idea/
+.vscode/
+
+# Internal working notes (not part of the published project)
+/plan/
+/reference/
+TODO.md
+
+# AI assistant files
+CLAUDE.md
+.claude/
+
+# Node
+node_modules/
+usage/node/package-lock.json
+
+# Personal recordings (not part of the project)
+assets/codewithwan_profile.*

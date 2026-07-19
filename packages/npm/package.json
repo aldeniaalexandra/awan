@@ -1,0 +1,47 @@
+{
+  "name": "@codewithwan/awan",
+  "version": "0.0.9",
+  "publishConfig": {
+    "access": "public"
+  },
+  "binaryVersion": "0.0.9",
+  "description": "A tiny pixel character that walks your GitHub contribution year — and lives in your terminal.",
+  "keywords": [
+    "cli",
+    "terminal",
+    "mascot",
+    "ascii",
+    "ansi",
+    "companion",
+    "fun"
+  ],
+  "homepage": "https://github.com/codewithwan/awan#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codewithwan/awan.git"
+  },
+  "license": "(MIT OR Apache-2.0)",
+  "bin": {
+    "awan": "run.js"
+  },
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "run.js",
+    "install.js",
+    "index.js",
+    "index.d.ts"
+  ],
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "engines": {
+    "node": ">=16"
+  }
+}

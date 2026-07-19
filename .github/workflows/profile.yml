@@ -1,0 +1,239 @@
+name: awan profile
+
+# The machinery behind a profile GIF, so a profile repo doesn't have to carry a
+# photocopy of it. Everything here used to be pasted into every reader's repo —
+# ~86 lines of jq that went stale the moment we fixed a bug in ours. Now a fix
+# reaches everyone by moving a tag.
+#
+# Call it from a profile repo:
+#
+#   jobs:
+#     awan:
+#       uses: codewithwan/awan/.github/workflows/profile.yml@v0
+#       permissions:
+#         contents: write
+#
+# @v0 moves forward as we release. Pin @v0.0.5 to freeze it — that tag's copy
+# of this file pins the renderer to the matching release, so the GIF it draws
+# never changes under you.
+
+on:
+  workflow_call:
+    inputs:
+      user:
+        description: "GitHub username to read. Defaults to the calling repo's owner."
+        type: string
+        default: ""
+      config:
+        description: "Path to your awan.json."
+        type: string
+        default: "awan.json"
+      brag_over:
+        description: "Contributions in the last 30 days that count as a good month."
+        type: number
+        default: 100
+      brag_say:
+        description: "What he says when you clear that bar."
+        type: string
+        default: "i'm so excited!"
+      cope_say:
+        description: "What he says when you don't."
+        type: string
+        default: "...i'll fix that, promise"
+      stats_banner:
+        description: "Path for the standalone stats banner (no character). Empty
+          = don't build it. Set it and the workflow fills your all-time numbers
+          and draws it — you add nothing to awan.json."
+        type: string
+        default: ""
+
+env:
+  # The release this copy of the file was cut with. Bump it when you tag.
+  AWAN_VERSION: v0.0.9
+
+jobs:
+  awan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The renderer is pinned, so this cache key is stable and the ~2 minute
+      # build only ever happens once per release.
+      - name: Restore the renderer
+        id: cached
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/awan-profile
+          key: awan-profile-${{ env.AWAN_VERSION }}-${{ runner.os }}
+      - uses: dtolnay/rust-toolchain@stable
+        if: steps.cached.outputs.cache-hit != 'true'
+      - name: Build the renderer
+        if: steps.cached.outputs.cache-hit != 'true'
+        run: |
+          cargo install --git https://github.com/codewithwan/awan \
+            --tag "$AWAN_VERSION" --locked awan-profile
+
+      # Pull your numbers and write them into awan.json. The renderer never
+      # touches the network — CI fetches, the binary just draws, which is what
+      # keeps its frames deterministic.
+      - name: Fetch your numbers
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          USER: ${{ inputs.user || github.repository_owner }}
+          CONFIG: ${{ inputs.config }}
+          BRAG_OVER: ${{ inputs.brag_over }}
+          BRAG_SAY: ${{ inputs.brag_say }}
+          COPE_SAY: ${{ inputs.cope_say }}
+        run: |
+          set -euo pipefail
+          api() { gh api "$1" --jq "$2" 2>/dev/null || echo "?"; }
+          REPOS=$(api "users/$USER" '.public_repos')
+          FOLLOWERS=$(api "users/$USER" '.followers')
+          FOLLOWING=$(api "users/$USER" '.following')
+          STARS=$(gh api "users/$USER/repos?per_page=100" --paginate \
+                    --jq '[.[].stargazers_count] | add' 2>/dev/null || echo "?")
+
+          # A year of contributions. The stock GITHUB_TOKEN reads a public
+          # calendar, so nobody needs a PAT or a secret.
+          gh api graphql -f query='
+          { user(login: "'"$USER"'") { contributionsCollection { contributionCalendar {
+              totalContributions
+              weeks { contributionDays { weekday contributionLevel contributionCount } }
+          } } } }' > cal.json
+
+          # One character per day: a GitHub quartile, "." where the calendar has
+          # no day. 371 of them beats 371 JSON numbers.
+          jq '
+            .data.user.contributionsCollection.contributionCalendar as $c
+            | { "NONE":"0", "FIRST_QUARTILE":"1", "SECOND_QUARTILE":"2",
+                "THIRD_QUARTILE":"3", "FOURTH_QUARTILE":"4" } as $lv
+            | { wall: ($c.weeks[-53:] | map(
+                  (.contributionDays
+                   | map({ key: (.weekday|tostring), value: $lv[.contributionLevel] })
+                   | from_entries) as $d
+                  | [range(0;7)] | map($d[tostring] // ".") | join("")
+                ) | join("")),
+                year: $c.totalContributions,
+                recent: ([$c.weeks[].contributionDays[].contributionCount][-30:] | add),
+                # Current streak: days back from today with at least one
+                # contribution. A blank today does not break it — you still
+                # have the rest of the day to fix that.
+                streak: ([$c.weeks[].contributionDays[].contributionCount] | reverse
+                         | (if .[0] == 0 then .[1:] else . end)
+                         | (index(0) // length)) }
+          ' cal.json > wall.json
+
+          jq --slurpfile w wall.json --argjson bar "$BRAG_OVER" \
+             --arg r "$REPOS" --arg s "$STARS" --arg f "$FOLLOWERS" --arg g "$FOLLOWING" \
+             --arg brag "$BRAG_SAY" --arg cope "$COPE_SAY" '
+              .stats = ["repos:\($r)", "stars earned:\($s)",
+                        "followers:\($f)", "following:\($g)"]
+            | .contributions  = $w[0].wall
+            | .contrib_year   = $w[0].year
+            | .contrib_recent = $w[0].recent
+            | .streak         = $w[0].streak
+            # the mood writes itself from the numbers
+            | .scenes = [ .scenes[] | if .act == "{verdict}" then
+                  (if $w[0].recent >= $bar
+                   then { act: "dance", say: $brag }
+                   else { act: "sleep", say: $cope } end)
+                else . end ]
+          ' "$CONFIG" > awan.tmp && mv awan.tmp "$CONFIG"
+          rm -f cal.json wall.json
+
+      # The stats banner wants numbers the one-year calendar can't give — an
+      # all-time contribution total from your first contribution, and your longest
+      # streak ever — so this walks the contribution calendar year by year, from
+      # the year you joined to now, and writes stat_boxes into your config. Only
+      # runs when you asked for the banner, so nobody else pays for the extra calls.
+      - name: Fill the stats banner numbers
+        if: inputs.stats_banner != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          USER: ${{ inputs.user || github.repository_owner }}
+          CONFIG: ${{ inputs.config }}
+        run: |
+          set -euo pipefail
+          FROM=$(gh api "users/$USER" --jq '.created_at' | cut -c1-4)
+          TO=$(date -u +%Y)
+          echo '[]' > days.json
+          for Y in $(seq "$FROM" "$TO"); do
+            gh api graphql -f query='
+            { user(login: "'"$USER"'") { contributionsCollection(
+                from: "'"$Y"'-01-01T00:00:00Z", to: "'"$Y"'-12-31T23:59:59Z") {
+                contributionCalendar { weeks { contributionDays { date contributionCount } } }
+            } } }' > y.json || continue
+            jq -s '.[0] + (.[1].data.user.contributionsCollection.contributionCalendar.weeks
+                           | map(.contributionDays[]?))' days.json y.json > d.tmp && mv d.tmp days.json
+          done
+
+          # sort the days, then in one pass: the all-time total (every day's
+          # contributions summed — the same figure GitHub headlines, commits +
+          # PRs + issues + reviews), the earliest active day, and the longest run
+          # of consecutive active days with its ends. The reduce is wrapped in
+          # parens and piped to `.best`: older jq (the runner's) won't bind a bare
+          # `reduce … as $x`, only a parenthesised term.
+          jq 'sort_by(.date) | unique_by(.date)
+              | (map(.contributionCount) | add // 0) as $total
+              | (map(select(.contributionCount > 0)) | .[0].date) as $first
+              | (reduce .[] as $d ({run: [], best: []};
+                  if $d.contributionCount > 0
+                  then (.run + [$d.date]) as $r
+                       | {run: $r, best: (if ($r|length) > (.best|length) then $r else .best end)}
+                  else {run: [], best: .best} end) | .best) as $best
+              | {total: $total, first: $first, len: ($best|length),
+                 from: ($best[0] // ""), to: ($best[-1] // "")}' \
+             days.json > life.json
+
+          fmt()  { date -u -d "$1" +"%-d %b %Y" 2>/dev/null || echo "$1"; }
+          fmts() { date -u -d "$1" +"%-d %b"    2>/dev/null || echo "$1"; }
+
+          STREAK=$(jq -r '.streak // 0' "$CONFIG")
+          if [ "$STREAK" -gt 0 ]; then
+            SSTART="since $(date -u -d "-$((STREAK-1)) days" +"%-d %b")"
+          else
+            SSTART="not today"
+          fi
+          TOTAL=$(jq -r '.total // 0' life.json)
+          FIRST=$(jq -r '.first // ""' life.json)
+          LFROM=$(jq -r '.from // ""' life.json); LTO=$(jq -r '.to // ""' life.json)
+          LLEN=$(jq -r '.len // 0' life.json)
+
+          jq --argjson n "$TOTAL" --arg fc "since $(fmt "$FIRST")" \
+             --arg cs "$STREAK days" --arg css "$SSTART" \
+             --arg ls "$LLEN days"   --arg lss "$(fmts "$LFROM") - $(fmt "$LTO")" '
+            def commas: tostring | . as $s | ($s | length) as $L
+              | if $L <= 3 then $s else ($s[:$L-3] | commas) + "," + $s[$L-3:] end;
+            .stat_boxes = [
+              {value: ($n | commas), label: "CONTRIBUTIONS",  note: $fc},
+              {value: $cs,           label: "CURRENT STREAK", note: $css},
+              {value: $ls,           label: "LONGEST STREAK", note: $lss}
+            ]' "$CONFIG" > awan.tmp && mv awan.tmp "$CONFIG"
+          rm -f y.json days.json life.json
+
+      - name: Draw it
+        run: awan-profile whoami --config "${{ inputs.config }}"
+
+      - name: Draw the stats banner
+        if: inputs.stats_banner != ''
+        run: awan-profile stats --config "${{ inputs.config }}" --out "${{ inputs.stats_banner }}"
+
+      - name: Shrink the GIFs
+        run: |
+          sudo apt-get update && sudo apt-get install -y gifsicle
+          OUT=$(jq -r '.output // "assets/awan.gif"' "${{ inputs.config }}")
+          gifsicle -O3 --colors 64 "$OUT" -o "$OUT"
+          BANNER="${{ inputs.stats_banner }}"
+          if [ -n "$BANNER" ] && [ "${BANNER##*.}" = "gif" ]; then
+            gifsicle -O3 --colors 64 "$BANNER" -o "$BANNER"
+          fi
+
+      - name: Commit the result
+        run: |
+          OUT=$(jq -r '.output // "assets/awan.gif"' "${{ inputs.config }}")
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$OUT" "${{ inputs.config }}"
+          [ -n "${{ inputs.stats_banner }}" ] && git add "${{ inputs.stats_banner }}" || true
+          git commit -m "chore: refresh awan profile" || echo "no changes"
+          git push
