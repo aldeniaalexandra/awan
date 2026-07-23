@@ -21,6 +21,7 @@ const UNIT_H: u32 = 30;
 const DESK_TOP: [u8; 3] = [150, 110, 78];
 const DESK_FACE: [u8; 3] = [120, 84, 58];
 const DESK_LEG: [u8; 3] = [90, 62, 42];
+const BACKDROP: [u8; 3] = [70, 60, 66];
 const LAPTOP_HINGE: [u8; 3] = [40, 42, 50];
 const SCREEN_GLOW: [u8; 3] = [140, 190, 255];
 
@@ -58,6 +59,12 @@ pub fn draw(img: &mut RgbaImage, w: u32, ground: u32) {
         UNIT_H,
         DESK_LEG,
     );
+
+    // A full-width backdrop behind the laptop, same width as the desk — so
+    // his own body never shows either side of the screen. Without it the
+    // screen reads as a mouth cut into him instead of a laptop in front of
+    // him: it has to fully replace that row, not just sit inside it.
+    fill(img, dx, screen_y, dw, UNIT_H, BACKDROP);
 
     // Laptop: the screen fills the free unit-row above the desk, a glowing
     // panel inside a dark hinge/bezel, sitting flush on the desktop.
