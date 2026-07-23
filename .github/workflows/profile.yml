@@ -57,6 +57,17 @@ on:
         description: "Longitude for a live sky. See weather_lat."
         type: string
         default: ""
+      day_say:
+        description: "What the {daynight} beat says when weather_lat/lon say
+          it's daytime there. Put { \"act\": \"{daynight}\", \"say\": \"...\" }
+          in your scenes to use it; ignored otherwise."
+        type: string
+        default: "back at it"
+      night_say:
+        description: "What the {daynight} beat says when it's night there.
+          See day_say."
+        type: string
+        default: "okay... nap time, zzz"
 
 env:
   # This fork's commit the renderer is built from. Bump it when this file's
@@ -158,12 +169,20 @@ jobs:
       # weather at that spot, and writes .sky / .weather into your config.
       # Leave either blank and this step does nothing — the backdrop stays
       # the flat one it's always been.
+      #
+      # It also resolves a {daynight} beat the same way the numbers step
+      # resolves {verdict}: put { "act": "{daynight}", "say": "..." } anywhere
+      # in your scenes and it becomes a sleep beat by night, a stroll beat by
+      # day — so he's asleep when it's actually night where you are, and back
+      # at it when it's actually day.
       - name: Fetch the weather
         if: inputs.weather_lat != '' && inputs.weather_lon != ''
         env:
           CONFIG: ${{ inputs.config }}
           LAT: ${{ inputs.weather_lat }}
           LON: ${{ inputs.weather_lon }}
+          DAY_SAY: ${{ inputs.day_say }}
+          NIGHT_SAY: ${{ inputs.night_say }}
         run: |
           set -euo pipefail
           curl -sS "https://api.open-meteo.com/v1/forecast?latitude=$LAT&longitude=$LON&current=weather_code,is_day" \
@@ -183,8 +202,14 @@ jobs:
             {sky: sky_of, weather: weather_of}
           ' weather.json > sky.json
 
-          jq --slurpfile s sky.json '.sky = $s[0].sky | .weather = $s[0].weather' \
-            "$CONFIG" > awan.tmp && mv awan.tmp "$CONFIG"
+          jq --slurpfile s sky.json --arg day "$DAY_SAY" --arg night "$NIGHT_SAY" '
+              .sky = $s[0].sky | .weather = $s[0].weather
+            | .scenes = [ .scenes[] | if .act == "{daynight}" then
+                  (if $s[0].sky == "night"
+                   then { act: "sleep", say: $night }
+                   else { act: "stroll", say: $day } end)
+                else . end ]
+          ' "$CONFIG" > awan.tmp && mv awan.tmp "$CONFIG"
           rm -f weather.json sky.json
 
       # The stats banner wants numbers the one-year calendar can't give — an

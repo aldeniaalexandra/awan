@@ -143,8 +143,8 @@ its own — no Ctrl+C.
       "then": "and {contrib_recent} in the last 30 days" }, // as the month lights
     { "act": "{verdict}", "say": "CI decides: excited, or not" },
     { "act": "sing" },
-    { "act": "soccer",   "say": "then a bit of football" },
-    { "act": "sleep",    "say": "okay... nap time, zzz" }
+    { "act": "soccer",    "say": "then a bit of football" },
+    { "act": "{daynight}", "say": "CI decides: asleep, or back at it" }
   ]
 }
 ```
@@ -163,6 +163,8 @@ its own — no Ctrl+C.
 | `contributions` | your GitHub year rises behind him; he walks over to the newest end and stands there while the last 30 days keep their colour and the year steps back |
 | `sleep` | yawns, dozes (`zzz`), wakes up |
 | `dance` | a little dance |
+| `{verdict}` | resolved by CI to `dance` or `sleep` — see "He reacts to how the month went" |
+| `{daynight}` | resolved by CI to `sleep` or `stroll` — see "He keeps your hours" |
 
 - **`say`** is the caption; `{name} {role} {location} {stack} {streak} {username}`
   are filled in, plus `{contrib_year}` and `{contrib_recent}`. The `sing` beat
@@ -194,6 +196,23 @@ COPE_SAY: "...i'll fix that, promise"
 Set the bar to your own idea of a good month, and write both lines yourself —
 they should sound like you, not like us. Keep every caption under ~42
 characters or it runs off the edge.
+
+### He keeps your hours
+
+`{ "act": "{daynight}" }` works the same way, off the *live sky* instead of
+your numbers: set `weather_lat` / `weather_lon` and the workflow resolves it
+from the real day or night at that spot — `sleep` at night, `stroll` by day.
+Wire it into a scene and he's asleep when it's actually night where you are.
+
+```yaml
+weather_lat: "-6.2088" # your coordinates
+weather_lon: "106.8456"
+DAY_SAY: "back at it"
+NIGHT_SAY: "okay... nap time, zzz"
+```
+
+Leave `weather_lat` / `weather_lon` blank and `{daynight}` is never resolved —
+don't use the act unless you've set both.
 
 It needs **no PAT and no secret** — the stock `GITHUB_TOKEN` reads a public
 contribution calendar fine. As ever, CI does the fetching and the binary only
@@ -244,6 +263,7 @@ No secrets to set up: the stock `GITHUB_TOKEN` reads everything this needs.
 | `brag_say` / `cope_say` | see above | what he says either side of that bar |
 | `stats_banner` | *(off)* | path for the stats banner; set it to draw one |
 | `weather_lat` / `weather_lon` | *(off)* | set both for a live sky: real day/night and weather at that spot, from Open-Meteo — no key needed |
+| `day_say` / `night_say` | see above | what the `{daynight}` beat says either side of real sunrise/sunset |
 
 ### Which tag to point at
 
