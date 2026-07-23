@@ -58,6 +58,7 @@ fn rasterize(reel: &Reel, profile: &Profile, t: i32) -> RgbaImage {
     let w = cols as u32 * CELL_W;
     let ground = rows as u32 * CELL_H;
     let mut img = RgbaImage::from_pixel(w, ground + CAPTION_H, Rgba([BG[0], BG[1], BG[2], 255]));
+    crate::sky::paint(&mut img, w, ground, &profile.sky, &profile.weather, t);
 
     for (i, cell) in cells.iter().enumerate() {
         let Some([r, g, b]) = *cell else { continue };

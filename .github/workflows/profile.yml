@@ -46,6 +46,17 @@ on:
           and draws it — you add nothing to awan.json."
         type: string
         default: ""
+      weather_lat:
+        description: "Latitude for a live sky. Empty (with weather_lon) = the
+          backdrop stays exactly as before — nobody is opted into this by
+          default. Set both and every run reads Open-Meteo for the real
+          day/night and weather at that spot, no key required."
+        type: string
+        default: ""
+      weather_lon:
+        description: "Longitude for a live sky. See weather_lat."
+        type: string
+        default: ""
 
 env:
   # The release this copy of the file was cut with. Bump it when you tag.
@@ -140,6 +151,40 @@ jobs:
                 else . end ]
           ' "$CONFIG" > awan.tmp && mv awan.tmp "$CONFIG"
           rm -f cal.json wall.json
+
+      # A live sky, opt-in: set both weather_lat and weather_lon and every run
+      # reads Open-Meteo (no key, no signup) for the real day/night and
+      # weather at that spot, and writes .sky / .weather into your config.
+      # Leave either blank and this step does nothing — the backdrop stays
+      # the flat one it's always been.
+      - name: Fetch the weather
+        if: inputs.weather_lat != '' && inputs.weather_lon != ''
+        env:
+          CONFIG: ${{ inputs.config }}
+          LAT: ${{ inputs.weather_lat }}
+          LON: ${{ inputs.weather_lon }}
+        run: |
+          set -euo pipefail
+          curl -sS "https://api.open-meteo.com/v1/forecast?latitude=$LAT&longitude=$LON&current=weather_code,is_day" \
+            > weather.json || echo '{}' > weather.json
+
+          jq '
+            def sky_of: if .current.is_day == 0 then "night" else "day" end;
+            def weather_of:
+              (.current.weather_code // 0) as $c
+              | if $c == 0 then "clear"
+                elif $c == 1 or $c == 2 then "cloudy"
+                elif $c == 3 then "overcast"
+                elif $c == 45 or $c == 48 then "fog"
+                elif ([51,53,55,56,57,61,63,65,66,67,80,81,82] | index($c)) then "rain"
+                elif ($c == 95 or $c == 96 or $c == 99) then "storm"
+                else "clear" end;
+            {sky: sky_of, weather: weather_of}
+          ' weather.json > sky.json
+
+          jq --slurpfile s sky.json '.sky = $s[0].sky | .weather = $s[0].weather' \
+            "$CONFIG" > awan.tmp && mv awan.tmp "$CONFIG"
+          rm -f weather.json sky.json
 
       # The stats banner wants numbers the one-year calendar can't give — an
       # all-time contribution total from your first contribution, and your longest

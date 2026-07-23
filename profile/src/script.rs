@@ -40,6 +40,13 @@ pub struct Profile {
     pub role: String,
     pub location: String,
     pub stack: String,
+    /// `"day"` or `"night"`. Empty = the flat backdrop, unchanged from before
+    /// this existed — existing profiles render exactly as they always have.
+    pub sky: String,
+    /// `"clear"`, `"cloudy"`, `"overcast"`, `"rain"`, `"storm"`, or `"fog"`.
+    /// Empty = no weather layer. CI fills both from a real forecast; nobody
+    /// types them by hand any more than they type `contrib_year`.
+    pub weather: String,
     pub streak: u32,
     pub song: String,
     pub artist: String,

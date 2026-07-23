@@ -121,6 +121,14 @@ its own — no Ctrl+C.
   "stat_boxes": [],                     // the stats banner's 3 boxes (no
                                         // character). CI fills these too — see
                                         // "The stats banner". Leave it empty.
+  "sky": "",                             // "day" | "night" | "" = the flat
+                                        // backdrop, unchanged. Set weather_lat
+                                        // / weather_lon on the workflow and CI
+                                        // fills this from the real sunrise/
+                                        // sunset at that spot — don't hand-edit
+  "weather": "",                        // "clear" | "cloudy" | "overcast" |
+                                        // "rain" | "storm" | "fog" | "" = no
+                                        // weather layer. Same deal — CI fills it
   "output": "assets/awan.gif",          // where the GIF is written
   "scenes": [                            // ← reorder / add / remove freely
     { "act": "wave",     "say": "hi there! i'm {name}" },
@@ -215,6 +223,8 @@ jobs:
       brag_say: "i'm so excited!"
       cope_say: "...i'll fix that, promise"
       stats_banner: assets/stats-banner.gif # optional; see "The stats banner"
+      weather_lat: "-6.2088" # optional; both = a live sky, real day/night + weather
+      weather_lon: "106.8456"
 ```
 
 Then reference the outputs in your profile `README.md`:
@@ -233,6 +243,7 @@ No secrets to set up: the stock `GITHUB_TOKEN` reads everything this needs.
 | `brag_over` | `100` | last-30 contributions that count as a good month |
 | `brag_say` / `cope_say` | see above | what he says either side of that bar |
 | `stats_banner` | *(off)* | path for the stats banner; set it to draw one |
+| `weather_lat` / `weather_lon` | *(off)* | set both for a live sky: real day/night and weather at that spot, from Open-Meteo — no key needed |
 
 ### Which tag to point at
 
