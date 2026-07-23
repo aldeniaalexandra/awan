@@ -72,7 +72,7 @@ on:
 env:
   # This fork's commit the renderer is built from. Bump it when this file's
   # copy of profile/src/ changes, so the cache key invalidates correctly.
-  AWAN_VERSION: 91575416113873e79b4ffe7bfc69b1df0879eea3
+  AWAN_VERSION: 83f3c4e8bdfec03054c23c910227762504861eab
 
 jobs:
   awan:
