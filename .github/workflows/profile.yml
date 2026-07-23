@@ -172,9 +172,10 @@ jobs:
       #
       # It also resolves a {daynight} beat the same way the numbers step
       # resolves {verdict}: put { "act": "{daynight}", "say": "..." } anywhere
-      # in your scenes and it becomes a sleep beat by night, a stroll beat by
-      # day — so he's asleep when it's actually night where you are, and back
-      # at it when it's actually day.
+      # in your scenes and it becomes a sleep beat by night, a stats beat
+      # (the little terminal window, printing real numbers) by day — so he's
+      # asleep when it's actually night where you are, and at his desk when
+      # it's actually day.
       - name: Fetch the weather
         if: inputs.weather_lat != '' && inputs.weather_lon != ''
         env:
@@ -207,7 +208,7 @@ jobs:
             | .scenes = [ .scenes[] | if .act == "{daynight}" then
                   (if $s[0].sky == "night"
                    then { act: "sleep", say: $night }
-                   else { act: "stroll", say: $day } end)
+                   else { act: "stats", say: $day } end)
                 else . end ]
           ' "$CONFIG" > awan.tmp && mv awan.tmp "$CONFIG"
           rm -f weather.json sky.json
