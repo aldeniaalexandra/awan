@@ -164,7 +164,8 @@ its own — no Ctrl+C.
 | `sleep` | yawns, dozes (`zzz`), wakes up |
 | `dance` | a little dance |
 | `{verdict}` | resolved by CI to `dance` or `sleep` — see "He reacts to how the month went" |
-| `{daynight}` | resolved by CI to `sleep` or `stats` — see "He keeps your hours" |
+| `{daynight}` | resolved by CI to `sleep` or `desk` — see "He keeps your hours" |
+| `desk` | sits behind a desk with a laptop open, screen lit |
 
 - **`say`** is the caption; `{name} {role} {location} {stack} {streak} {username}`
   are filled in, plus `{contrib_year}` and `{contrib_recent}`. The `sing` beat
@@ -201,10 +202,10 @@ characters or it runs off the edge.
 
 `{ "act": "{daynight}" }` works the same way, off the *live sky* instead of
 your numbers: set `weather_lat` / `weather_lon` and the workflow resolves it
-from the real day or night at that spot — `sleep` at night, `stats` (the
-little terminal window, printing your real numbers) by day. Wire it into a
-scene and he's asleep when it's actually night where you are, and at his desk
-when it's actually day.
+from the real day or night at that spot — `sleep` at night, `desk` (a laptop
+open in front of him, screen lit) by day. Wire it into a scene and he's asleep
+when it's actually night where you are, and at his desk when it's actually
+day.
 
 ```yaml
 weather_lat: "-6.2088" # your coordinates

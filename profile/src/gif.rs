@@ -75,6 +75,9 @@ fn rasterize(reel: &Reel, profile: &Profile, t: i32) -> RgbaImage {
     if let Some(k) = profile.stats_at(reel, t) {
         stat_labels(&mut img, profile, k);
     }
+    if profile.desk_at(reel, t).is_some() {
+        crate::desk::draw(&mut img, w, ground);
+    }
 
     match profile.sing_at(reel, t) {
         Some(k) => karaoke(&mut img, profile, k, ground),

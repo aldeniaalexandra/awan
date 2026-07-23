@@ -36,7 +36,7 @@ pub fn icon_of(act: &str) -> &'static Icon {
         "campfire" => &icons::FIRE,
         "stats" => &icons::DIAMOND,
         "contributions" => &icons::CODE,
-        "present" => &icons::BRIEFCASE,
+        "present" | "desk" => &icons::BRIEFCASE,
         _ => &icons::DIAMOND,
     }
 }

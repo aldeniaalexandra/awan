@@ -12,6 +12,7 @@ use std::time::Duration;
 
 use awan_core::{Character, Reel, Size};
 
+mod desk;
 mod draw;
 mod gif;
 mod script;

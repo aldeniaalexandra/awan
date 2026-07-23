@@ -116,6 +116,11 @@ impl Profile {
         self.beat_at(reel, t, "contributions")
     }
 
+    /// If the beat at tick `t` is the desk beat, its tick-within-scene.
+    pub fn desk_at(&self, reel: &Reel, t: i32) -> Option<i32> {
+        self.beat_at(reel, t, "desk")
+    }
+
     fn beat_at(&self, reel: &Reel, t: i32, act: &str) -> Option<i32> {
         let (i, k) = reel.act_at(t)?;
         (self.story().get(i).map(|s| s.act.as_str()) == Some(act)).then_some(k)
