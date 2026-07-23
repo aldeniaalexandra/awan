@@ -59,8 +59,9 @@ on:
         default: ""
 
 env:
-  # The release this copy of the file was cut with. Bump it when you tag.
-  AWAN_VERSION: v0.0.9
+  # This fork's commit the renderer is built from. Bump it when this file's
+  # copy of profile/src/ changes, so the cache key invalidates correctly.
+  AWAN_VERSION: 3082ecbc5e6d31c606ecee28693b4b7993e9cffd
 
 jobs:
   awan:
@@ -81,8 +82,8 @@ jobs:
       - name: Build the renderer
         if: steps.cached.outputs.cache-hit != 'true'
         run: |
-          cargo install --git https://github.com/codewithwan/awan \
-            --tag "$AWAN_VERSION" --locked awan-profile
+          cargo install --git https://github.com/aldeniaalexandra/awan \
+            --rev "$AWAN_VERSION" --locked awan-profile
 
       # Pull your numbers and write them into awan.json. The renderer never
       # touches the network — CI fetches, the binary just draws, which is what
